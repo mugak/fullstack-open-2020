@@ -1,7 +1,11 @@
 import React from 'react'
 
-const Person = props => <div>{props.name} {props.number}</div>
+const Person = props => {
+    return <div>{props.person.name} {props.person.number} <button onClick={() => props.remove(props.person)}>delete</button></div>
+}
 
-const Persons = props => props.filteredPersons.map(person => <Person key={person.number} name={person.name} number={person.number} />)
+const Persons = props => {
+    return props.filteredPersons.map(person => <Person key={person.id} person={person} remove={props.remove} />)
+}
 
 export default Persons

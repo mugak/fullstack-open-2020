@@ -1,19 +1,24 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import personService from './services/persons'
 
 const App = () => {
-  const [ persons, setPersons ] = useState([
-    { name: 'Arto Hellas', number: '040-123456' },
-    { name: 'Ada Lovelace', number: '39-44-5323523' },
-    { name: 'Dan Abramov', number: '12-43-234345' },
-    { name: 'Mary Poppendieck', number: '39-23-6423122' }
-  ])
-  const [ filteredPersons, setFilteredPersons ] = useState(persons)
+  const [ persons, setPersons ] = useState([])
+  const [ filteredPersons, setFilteredPersons ] = useState([])
   const [ newName, setNewName ] = useState('')
   const [ newNumber, setNewNumber ] = useState('')
   const [ newFilter, setNewFilter ] = useState('')
+
+  useEffect(() => {
+    personService
+      .getAll()
+      .then(initialPersons => {
+        setPersons(initialPersons)
+        setFilteredPersons(initialPersons)
+      })
+    }, [])
 
   const addPerson = event => {
     event.preventDefault()
@@ -22,16 +27,38 @@ const App = () => {
       number: newNumber
     }
 
-    if (persons.some(person => person.name === newPerson.name && person.number === newPerson.number)) {
-      alert(`${newPerson.name} is already added to phonebook`)
-    } else {
-      setPersons(persons.concat(newPerson))
-      if (newPerson.name.toLowerCase().includes(newFilter.toLowerCase())) {
-        setFilteredPersons(filteredPersons.concat(newPerson))
-
+    if (persons.some(person => person.name === newPerson.name)) {
+      if(window.confirm(`${newPerson.name} is already added to phonebook, do you want to replace their number?`)) {
+        personService
+          .update(persons.find(person => person.name === newPerson.name).id, newPerson)
+          .then(updatedPerson => {
+            setPersons(persons.map(person => person.id === updatedPerson.id ? updatedPerson : person))
+            if (updatedPerson.name.toLowerCase().includes(newFilter.toLowerCase())) {
+              setFilteredPersons(filteredPersons.map(person => person.id === updatedPerson.id ? updatedPerson : person))
+            }
+            setNewName('')
+            setNewNumber('')
+          })
       }
-      setNewName('')
-      setNewNumber('')
+    } else {
+      personService
+        .create(newPerson)
+        .then(returnedPerson => {
+          setPersons(persons.concat(returnedPerson))
+          if (returnedPerson.name.toLowerCase().includes(newFilter.toLowerCase())) {
+            setFilteredPersons(filteredPersons.concat(returnedPerson))
+          }
+          setNewName('')
+          setNewNumber('')
+        })
+    }
+  }
+  
+  const removePerson = removedPerson => {
+    if (window.confirm(`Are you sure you want to delete ${removedPerson.name}?`)) {
+      personService.remove(removedPerson.id)
+      setPersons(persons.filter(person => person.id !== removedPerson.id))
+      setFilteredPersons(filteredPersons.filter(person => person.id !== removedPerson.id))   
     }
   }
 
@@ -56,7 +83,7 @@ const App = () => {
   
       <h2>Numbers</h2>
 
-      <Persons filteredPersons={filteredPersons}/>
+      <Persons filteredPersons={filteredPersons} remove={removePerson}/>
     </div>
   )
 }
