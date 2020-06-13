@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import Notification from './components/Notification'
 import personService from './services/persons'
 
 const App = () => {
@@ -10,6 +11,8 @@ const App = () => {
   const [ newName, setNewName ] = useState('')
   const [ newNumber, setNewNumber ] = useState('')
   const [ newFilter, setNewFilter ] = useState('')
+  const [ notificationMessage, setNotificationMessage ] = useState(null)
+  const [ notificationStyle, setNotificationStyle ] = useState(null)
 
   useEffect(() => {
     personService
@@ -38,6 +41,23 @@ const App = () => {
             }
             setNewName('')
             setNewNumber('')
+            setNotificationMessage(`Updated ${newPerson.name}'s number to ${newPerson.number}`)
+            setNotificationStyle('success')
+            setTimeout(() => {
+              setNotificationMessage(null)
+              setNotificationStyle(null)
+            }, 5000)
+          })
+          .catch(error => {
+            setNotificationMessage(`Cannot update ${newPerson.name} - has already been removed from the server`)
+            setNotificationStyle('error')
+            setTimeout(() => {
+              setNotificationMessage(null)
+              setNotificationStyle(null)
+            }, 5000) 
+            if (newPerson.name.toLowerCase().includes(newFilter.toLowerCase())) {
+              setFilteredPersons(filteredPersons.filter(person => person.name !== newPerson.name))
+            }
           })
       }
     } else {
@@ -50,13 +70,28 @@ const App = () => {
           }
           setNewName('')
           setNewNumber('')
+          setNotificationMessage(`Added ${newPerson.name}`)
+          setNotificationStyle('success')
+          setTimeout(() => {
+            setNotificationMessage(null)
+            setNotificationStyle(null)
+          }, 5000)
         })
     }
   }
   
   const removePerson = removedPerson => {
     if (window.confirm(`Are you sure you want to delete ${removedPerson.name}?`)) {
-      personService.remove(removedPerson.id)
+      personService
+        .remove(removedPerson.id)
+        .catch(error => {
+          setNotificationMessage(`Cannot delete - ${removedPerson.name} has already been removed from the server`)
+          setNotificationStyle('error')
+          setTimeout(() => {
+            setNotificationMessage(null)
+            setNotificationStyle(null)
+          }, 5000)
+        })
       setPersons(persons.filter(person => person.id !== removedPerson.id))
       setFilteredPersons(filteredPersons.filter(person => person.id !== removedPerson.id))   
     }
@@ -74,6 +109,8 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+
+      <Notification message={notificationMessage} styleClass={notificationStyle} />
 
       <Filter value={newFilter} onChange={handleFilterChange} />
 
